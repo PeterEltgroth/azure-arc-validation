@@ -1,5 +1,5 @@
-- Upstream Kubernetes Version:
-- K8s Distribution Version:
+- Upstream Kubernetes Version: TKGm 1.2.1
+- K8s Distribution Version: v1.19.3+vmware.1
 - Additional Storage/Network Driver details (if applicable):
 - Private Cloud details (if applicable):
 - Bare-metal Node details (if applicable):
