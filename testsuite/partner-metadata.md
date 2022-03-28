@@ -1,6 +1,6 @@
-- Upstream Kubernetes Version: TKGm 1.2.1
-- K8s Distribution Version: v1.19.3+vmware.1
-- Additional Storage/Network Driver details (if applicable):
+- Upstream Kubernetes Version: TKGm 1.5.1
+- K8s Distribution Version: v1.22.5+vmware.1
+- Additional Storage/Network Driver details (if applicable): VSphere CSI Driver 2.4.1+vmware.1 / Antrea v1.2.3+vmware.4
 - Private Cloud details (if applicable):
 - Bare-metal Node details (if applicable):
 - OEM/IHV solution details (if applicable):

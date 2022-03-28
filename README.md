@@ -11,7 +11,7 @@ It is recommended that our partners integrate the conformance tests into their C
 The conformance tests need to be run every time there's an update (major or minor) to the partner offering or to the Azure Arc components.
 These components include*:
 - **Arc enabled Kubernetes**: The core Arc enabled Kubernetes with functionalities such as onboarding a cluster to Arc, GitOps etc.
-- **Arc enabled Data Services**: Provides Azure data services offerings such as SQLMI on your clusters on-prem or on other clouds.
+- **Arc enabled Data Services**: Provides Azure data services offerings such as SQLMI and PostgreSQL server on your clusters on-prem or on other clouds.
 
 *These components may grow in the future as the Azure Arc portfolio widens.
 
@@ -23,9 +23,9 @@ The testing strategy can be broken down into two parts:
 
 | Arc enabled Kubernetes Minor Release | Version |
 | :---: | :----: |
-| N | 1.3.8 |
-| N-1 | 1.2.0 |
-| N-2 | 1.1.0 |
+| N | 1.5.2 |
+| N-1 | 1.4.0 |
+| N-2 | 1.3.8 |
 
 ### Partner Tasks
 

@@ -7,19 +7,19 @@ AZ_SUBSCRIPTION_ID=3959ec86-5353-4b0c-b5d7-3877122861a0 # subscription id of the
 AZ_CLIENT_ID=dedc1151-fef0-4911-839b-8414f7d06eb0       # appid field of the service principal
 AZ_CLIENT_SECRET=VlAXa3bc4n-l2d~ERAWUePzzd84v--ucxs     # password field of the service principal
 AZ_STORAGE_ACCOUNT=vmwaredssa                           # name of your storage account
-# SharedAccessSignature=sv=2020-04-08&ss=btqf&srt=sco&st=2021-08-11T18%3A32%3A08Z&se=2022-08-12T18%3A32%3A00Z&sp=rwlacu&sig=7vYidR48JU9fca4brBZenZanFB0nwRrF0L07IOttEMI%3D;BlobEndpoint=https://vmwaredssa.blob.core.windows.net/;FileEndpoint=https://vmwaredssa.file.core.windows.net/;QueueEndpoint=https://vmwaredssa.queue.core.windows.net/;TableEndpoint=https://vmwaredssa.table.core.windows.net/;
-# ?sv=2020-04-08&ss=btqf&srt=sco&st=2021-08-11T18%3A32%3A08Z&se=2022-08-12T18%3A32%3A00Z&sp=rwlacu&sig=7vYidR48JU9fca4brBZenZanFB0nwRrF0L07IOttEMI%3D
 AZ_STORAGE_ACCOUNT_SAS="?sv=2020-04-08&ss=btqf&srt=sco&st=2021-08-11T18%3A32%3A08Z&se=2022-08-12T18%3A32%3A00Z&sp=rwlacu&sig=7vYidR48JU9fca4brBZenZanFB0nwRrF0L07IOttEMI%3D" # sas token for your storage account, please add it within the quotes
 RESOURCE_GROUP=external-vmware                          # resource group name; set this to the resource group
-OFFERING_NAME=TKGm-v1.2.1                 # name of the partner offering; use this variable to distinguish between the results tar for different offerings
+OFFERING_NAME=TKGm-v1.5.1                               # name of the partner offering; use this variable to distinguish between the results tar for different offerings
 LOCATION=eastus                                         # location of the arc connected cluster
 NAMESPACE=arc-ds-controller                             # namespace of the data controller
-DATA_CONTROLLER_STORAGE_CLASS=default # choose the storage class for data controller
-SQL_MI_STORAGE_CLASS=default # choose the storage class for sql mi
 CONFIG_PROFILE=azure-arc-aks-default-storage            # choose the config profile
+DATA_CONTROLLER_STORAGE_CLASS=default                   # choose the storage class for data controller
+SQL_MI_STORAGE_CLASS=default                            # choose the storage class for sql mi
+PSQL_STORAGE_CLASS=default                              # choose the storage class for postgreSQL
 AZDATA_USERNAME=azureuser                               # database username
 AZDATA_PASSWORD=Welcome1234%                            # database password
 SQL_INSTANCE_NAME=arc-sql                               # sql instance name
+PSQL_SERVERGROUP_NAME=arc-psql                          # postgreSQL server name
 INFRASTRUCTURE=azure                                    # Allowed values are alibaba, aws, azure, gpc, onpremises, other.
 
 # In case your cluster is behind an outbound proxy, please add the following environment variables in the below command
@@ -30,7 +30,7 @@ INFRASTRUCTURE=azure                                    # Allowed values are ali
 # In case your outbound proxy is setup with certificate authentication, follow the below steps:
 # Create a Kubernetes generic secret with the name sonobuoy-proxy-cert with key proxycert in any namespace:
 # kubectl create secret generic sonobuoy-proxy-cert --from-file=proxycert=<path-to-cert-file>
-# By default we check for the secret in the default namespace. In case you have created the secret in some other namespace, please add the following variables in the sonobuoy run command: 
+# By default we check for the secret in the default namespace. In case you have created the secret in some other namespace, please add the following variables in the sonobuoy run command:
 # --plugin-env azure-arc-ds-platform.PROXY_CERT_NAMESPACE="<namespace of sonobuoy secret>"
 
 echo "Running the test suite.."
@@ -40,12 +40,14 @@ echo "Running the test suite.."
 sonobuoy run --wait --level debug \
 --plugin arc-dataservices/dataservices.yaml \
 --plugin-env azure-arc-ds-platform.NAMESPACE=$NAMESPACE \
+--plugin-env azure-arc-ds-platform.CONFIG_PROFILE=$CONFIG_PROFILE \
 --plugin-env azure-arc-ds-platform.DATA_CONTROLLER_STORAGE_CLASS=$DATA_CONTROLLER_STORAGE_CLASS \
 --plugin-env azure-arc-ds-platform.SQL_MI_STORAGE_CLASS=$SQL_MI_STORAGE_CLASS \
---plugin-env azure-arc-ds-platform.CONFIG_PROFILE=$CONFIG_PROFILE \
+--plugin-env azure-arc-ds-platform.PSQL_STORAGE_CLASS=$PSQL_STORAGE_CLASS \
 --plugin-env azure-arc-ds-platform.AZDATA_USERNAME=$AZDATA_USERNAME \
 --plugin-env azure-arc-ds-platform.AZDATA_PASSWORD=$AZDATA_PASSWORD \
 --plugin-env azure-arc-ds-platform.SQL_INSTANCE_NAME=$SQL_INSTANCE_NAME \
+--plugin-env azure-arc-ds-platform.PSQL_SERVERGROUP_NAME=$PSQL_SERVERGROUP_NAME \
 --plugin-env azure-arc-ds-platform.TENANT_ID=$AZ_TENANT_ID \
 --plugin-env azure-arc-ds-platform.SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID \
 --plugin-env azure-arc-ds-platform.RESOURCE_GROUP=$RESOURCE_GROUP \
@@ -53,31 +55,30 @@ sonobuoy run --wait --level debug \
 --plugin-env azure-arc-ds-platform.CLIENT_ID=$AZ_CLIENT_ID \
 --plugin-env azure-arc-ds-platform.CLIENT_SECRET=$AZ_CLIENT_SECRET \
 --plugin-env azure-arc-ds-platform.INFRASTRUCTURE=$INFRASTRUCTURE \
---sonobuoy-image harbor-repo.vmware.com/dockerhub-proxy-cache/sonobuoy/sonobuoy:v0.53.2 \
-
+--config config.json
+--sonobuoy-image projects.registry.vmware.com/sonobuoy/sonobuoy@sha256:9f0818cca26dd8e126bf6187b933f51557a6ac7de342e0fe6a789f55fc047eb9
 # On `sonobuoy run` when passing a `--kubeconfig` it seems `--sonobuoy-image` is ignored, thus defaults to docker.io (rather than using harbor-repo.vmware.com), which of course results in `429 Too Many Requests - Server message: toomanyrequests: You have reached your pull rate limit.`
 
 status=$(sonobuoy status)
 
 echo $status
-
 echo "Test execution completed..Retrieving results"
 
 sonobuoyResults=$(sonobuoy retrieve)
 echo $sonobuoyResults
 
-# sonobuoy results $sonobuoyResults
-# mkdir results
-# mv $sonobuoyResults results/$sonobuoyResults
-# cp partner-metadata.md results/partner-metadata.md
-# tar -czvf ds-conformance-results-$OFFERING_NAME.tar.gz results
+sonobuoy results $sonobuoyResults
+mkdir results
+mv $sonobuoyResults results/$sonobuoyResults
+cp partner-metadata.md results/partner-metadata.md
+tar -czvf ds-conformance-results-$OFFERING_NAME.tar.gz results
 
-# rm -rf results
+rm -rf results
 
-# echo "Publishing results.."
+echo "Publishing results.."
 
-# az login --service-principal --username $AZ_CLIENT_ID --password $AZ_CLIENT_SECRET --tenant $AZ_TENANT_ID
-# az account set -s $AZ_SUBSCRIPTION_ID
+az login --service-principal --username $AZ_CLIENT_ID --password $AZ_CLIENT_SECRET --tenant $AZ_TENANT_ID
+az account set -s $AZ_SUBSCRIPTION_ID
 
-# az storage container create -n conformance-results --account-name $AZ_STORAGE_ACCOUNT --sas-token $AZ_STORAGE_ACCOUNT_SAS
-# az storage blob upload --socket-timeout 3600 --file ds-conformance-results-$OFFERING_NAME.tar.gz --name conformance-results-$OFFERING_NAME.tar.gz --container-name conformance-results --account-name $AZ_STORAGE_ACCOUNT --sas-token $AZ_STORAGE_ACCOUNT_SAS
+az storage container create -n conformance-results --account-name $AZ_STORAGE_ACCOUNT --sas-token $AZ_STORAGE_ACCOUNT_SAS
+az storage blob upload --socket-timeout 3600 --file ds-conformance-results-$OFFERING_NAME.tar.gz --name conformance-results-$OFFERING_NAME.tar.gz --container-name conformance-results --account-name $AZ_STORAGE_ACCOUNT --sas-token $AZ_STORAGE_ACCOUNT_SAS

@@ -6,11 +6,12 @@ connectedClustedId=$(uuid | tr -dc A-Za-z0-9 | head -c 7)   #$(tr -dc A-Za-z0-9 
 AZ_TENANT_ID=8548a469-8c0e-4aa4-b534-ac75ca1e02f7       # tenant field of the service principal
 AZ_SUBSCRIPTION_ID=3959ec86-5353-4b0c-b5d7-3877122861a0 # subscription id of the azure subscription (will be provided)
 AZ_CLIENT_ID=dedc1151-fef0-4911-839b-8414f7d06eb0       # appid field of the service principal
+AZ_OBJECT_ID=36d14979-cf18-4987-921f-2bb75c1fb247       # objectid of the service principal, please add it within the quotes
 AZ_CLIENT_SECRET=VlAXa3bc4n-l2d~ERAWUePzzd84v--ucxs     # password field of the service principal
 AZ_STORAGE_ACCOUNT=vmwarearcsa                          # name of your storage account
 AZ_STORAGE_ACCOUNT_SAS="?sv=2020-04-08&ss=btqf&srt=sco&st=2021-08-12T00%3A55%3A51Z&se=2022-08-13T00%3A55%3A00Z&sp=rwlacu&sig=2kXRIzyXmlwbP92BtLrrLMrdfb96MKZR7TRWxytcanc%3D" # sas token for your storage account, please add it within the quotes
 RESOURCE_GROUP=external-vmware                          # resource group name; set this to the resource group
-OFFERING_NAME=TKGm-v1.2.1                # name of the partner offering; use this variable to distinguish between the results tar for different offerings
+OFFERING_NAME=TKGm-v1.5.1                # name of the partner offering; use this variable to distinguish between the results tar for different offerings
 CLUSTERNAME=arc-partner-test-$connectedClustedId        # name of the arc connected cluster
 LOCATION=eastus                                         # location of the arc connected cluster
 
@@ -25,7 +26,7 @@ CLEANUP_TIMEOUT=1500 # time in seconds after which the platform cleanup plugin t
 # In case your outbound proxy is setup with certificate authentication, follow the below steps:
 # Create a Kubernetes generic secret with the name sonobuoy-proxy-cert with key proxycert in any namespace:
 # kubectl create secret generic sonobuoy-proxy-cert --from-file=proxycert=<path-to-cert-file>
-# By default we check for the secret in the default namespace. In case you have created the secret in some other namespace, please add the following variables in the sonobuoy run command: 
+# By default we check for the secret in the default namespace. In case you have created the secret in some other namespace, please add the following variables in the sonobuoy run command:
 # --plugin-env azure-arc-platform.PROXY_CERT_NAMESPACE="<namespace of sonobuoy secret>"
 # --plugin-env azure-arc-agent-cleanup.PROXY_CERT_NAMESPACE="namespace of sonobuoy secret"
 
@@ -34,7 +35,7 @@ az account set -s $AZ_SUBSCRIPTION_ID
 
 while IFS= read -r arc_platform_version || [ -n "$arc_platform_version" ]; do
 
-    echo "Running the test suite for Arc for Kubernetes version: ${arc_platform_version}"    
+    echo "Running the test suite for Arc for Kubernetes version: ${arc_platform_version}"
 
     sonobuoy run --wait \
     --plugin arc-k8s-platform/platform.yaml \
@@ -54,11 +55,18 @@ while IFS= read -r arc_platform_version || [ -n "$arc_platform_version" ]; do
     --plugin-env azure-arc-agent-cleanup.CLEANUP_TIMEOUT=$CLEANUP_TIMEOUT \
     --plugin-env azure-arc-agent-cleanup.CLIENT_ID=$AZ_CLIENT_ID \
     --plugin-env azure-arc-agent-cleanup.CLIENT_SECRET=$AZ_CLIENT_SECRET \
+    --plugin-env azure-arc-platform.OBJECT_ID=$AZ_OBJECT_ID \
+    --config config.json
 
     echo "Test execution completed..Retrieving results"
 
     sonobuoyResults=$(sonobuoy retrieve)
     sonobuoy results $sonobuoyResults
+
+    mkdir testResult
+    python arc-k8s-platform/remove-secrets.py $sonobuoyResults testResult
+
+    rm -rf testResult
     mkdir results
     mv $sonobuoyResults results/$sonobuoyResults
     cp partner-metadata.md results/partner-metadata.md
@@ -77,5 +85,8 @@ while IFS= read -r arc_platform_version || [ -n "$arc_platform_version" ]; do
 
     echo "Cleaning the cluster.."
     sonobuoy delete --wait
+
+    echo "Buffer wait 5 minutes..."
+    sleep 5m
 
 done < aak8sSupportPolicy.txt
